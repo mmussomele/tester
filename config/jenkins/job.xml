@@ -24,7 +24,7 @@ go get -v -u github.com/quilt/quilt github.com/quilt/tester
 
 cd $GOPATH/src/github.com/quilt/tester
 make tests
-tester --preserve-failed -testRoot=./tests</command>
+tester --preserve-failed -testRoot=./tests -junitOut=${WORKSPACE}/report.xml</command>
     </hudson.tasks.Shell>
   </builders>
   <publishers>
@@ -36,6 +36,12 @@ tester --preserve-failed -testRoot=./tests</command>
       <defaultExcludes>true</defaultExcludes>
       <caseSensitive>true</caseSensitive>
     </hudson.tasks.ArtifactArchiver>
+    <hudson.tasks.junit.JUnitResultArchiver plugin="junit@1.20">
+      <testResults>report.xml</testResults>
+      <keepLongStdio>false</keepLongStdio>
+      <healthScaleFactor>1.0</healthScaleFactor>
+      <allowEmptyResults>false</allowEmptyResults>
+    </hudson.tasks.junit.JUnitResultArchiver>
     <jenkins.plugins.slack.SlackNotifier plugin="slack@2.2">
       <baseUrl></baseUrl>
       <teamDomain>{{slackTeam}}</teamDomain>
@@ -52,6 +58,8 @@ tester --preserve-failed -testRoot=./tests</command>
       <notifyFailure>true</notifyFailure>
       <notifyBackToNormal>true</notifyBackToNormal>
       <notifyRepeatedFailure>true</notifyRepeatedFailure>
+      <includeTestSummary>true</includeTestSummary>
+      <includeFailedTests>true</includeFailedTests>
       <commitInfoChoice>NONE</commitInfoChoice>
       <includeCustomMessage>false</includeCustomMessage>
       <customMessage></customMessage>

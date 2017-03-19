@@ -8,7 +8,8 @@ USER jenkins
 
 ADD config/id_rsa /var/jenkins_home/.ssh/id_rsa
 
-RUN /usr/local/bin/install-plugins.sh golang ws-cleanup timestamper slack
+RUN /usr/local/bin/install-plugins.sh golang ws-cleanup timestamper slack \
+    test-results-analyzer
 
 # XXX: We unset the Entrypoint so that specs can run arbitrary commands (such
 # as `bash`) to initialize the container. This is necessary to properly write

@@ -58,6 +58,7 @@ func main() {
 
 type tester struct {
 	preserveFailed bool
+	junitOut       string
 
 	testSuites  []*testSuite
 	initialized bool
@@ -73,6 +74,8 @@ func newTester(namespace string) (tester, error) {
 		"the root directory containing the integration tests")
 	flag.BoolVar(&t.preserveFailed, "preserve-failed", false,
 		"don't destroy machines on failed tests")
+	flag.StringVar(&t.junitOut, "junitOut", "",
+		"location to write junit report")
 	flag.Parse()
 
 	if *testRoot == "" {
@@ -140,6 +143,10 @@ func (t *tester) generateTestSuites(testRoot string) error {
 
 func (t tester) run() error {
 	defer func() {
+		if t.junitOut != "" {
+			writeJUnitReport(t.testSuites, t.junitOut)
+		}
+
 		failed := false
 		for _, suite := range t.testSuites {
 			if suite.failed != 0 {
