@@ -237,9 +237,11 @@ func (t tester) runTestSuites() error {
 }
 
 type testSuite struct {
-	name   string
-	spec   string
-	test   string
+	name string
+	spec string
+	test string
+
+	output string
 	passed bool
 }
 
@@ -268,7 +270,7 @@ func (ts *testSuite) run() error {
 	l.infoln("Starting Test")
 	l.println(".. " + filepath.Base(ts.test))
 
-	err := runTest(ts.test)
+	output, err := runTest(ts.test)
 	if err == nil {
 		l.println(".... Passed")
 		ts.passed = true
@@ -276,6 +278,7 @@ func (ts *testSuite) run() error {
 		l.println(".... Failed")
 		ts.passed = false
 	}
+	ts.output = output
 
 	return err
 }
@@ -308,24 +311,11 @@ func waitForContainers(specPath string) error {
 	}, 15*time.Second, 10*time.Minute)
 }
 
-func runTest(testPath string) error {
-	testPassed := true
-
+func runTest(testPath string) (string, error) {
 	output, err := exec.Command(testPath).CombinedOutput()
 	if err != nil || !strings.Contains(string(output), "PASSED") {
-		testPassed = false
+		_, testName := filepath.Split(testPath)
+		err = fmt.Errorf("test failed: %s", testName)
 	}
-
-	_, testName := filepath.Split(testPath)
-	l := log.testLogger(testPassed, testName)
-	if !testPassed {
-		l.infoln("Failed!")
-	}
-
-	l.println(string(output))
-
-	if !testPassed {
-		return fmt.Errorf("test failed: %s", testName)
-	}
-	return nil
+	return string(output), err
 }

@@ -18,12 +18,13 @@ type TestCase struct {
 	Name      string    `xml:"name,attr"`
 	ClassName string    `xml:"classname,attr"`
 	Failure   *struct{} `xml:"failure,omitempty"`
+	Output    string    `xml:"system-out"`
 }
 
 func writeJUnitReport(tests []*testSuite, filename string) {
 	report := JUnitReport{NumTests: len(tests)}
 	for _, t := range tests {
-		junitResult := TestCase{Name: t.name, ClassName: "tests"}
+		junitResult := TestCase{Name: t.name, ClassName: "tests", Output: t.output}
 		if !t.passed {
 			junitResult.Failure = &struct{}{}
 		}

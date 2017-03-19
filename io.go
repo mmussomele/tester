@@ -17,41 +17,20 @@ var logsRoot = filepath.Join(os.Getenv("WORKSPACE"), "logs")
 var appFs = afero.NewOsFs()
 
 type logger struct {
-	rootDir      string
 	cmdLogger    fileLogger
 	testerLogger fileLogger
-}
-
-// Creates a new fileLogger for the given test, in the appropriate
-// "passed" or "failed" directory.
-func (l logger) testLogger(passed bool, testName string) fileLogger {
-	filename := fmt.Sprintf("%s.txt", testName)
-	folder := filepath.Join(l.rootDir, "passed")
-	if !passed {
-		folder = filepath.Join(l.rootDir, "failed")
-	}
-	return fileLogger(filepath.Join(folder, filename))
 }
 
 // Create a new logger that will log in the proper directory.
 // Also initializes all necessary directories and files.
 func newLogger() (logger, error) {
-	passedDir := filepath.Join(logsRoot, "passed")
-	failedDir := filepath.Join(logsRoot, "failed")
 	logDir := filepath.Join(logsRoot, "log")
 
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return logger{}, err
 	}
-	if err := os.MkdirAll(passedDir, 0755); err != nil {
-		return logger{}, err
-	}
-	if err := os.MkdirAll(failedDir, 0755); err != nil {
-		return logger{}, err
-	}
 
 	return logger{
-		rootDir:      logsRoot,
 		testerLogger: fileLogger(filepath.Join(logDir, "quilt-tester.log")),
 		cmdLogger:    fileLogger(filepath.Join(logDir, "container.log")),
 	}, nil
