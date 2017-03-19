@@ -331,18 +331,7 @@ func runTest(testPath string) error {
 		l.infoln("Failed!")
 	}
 
-	if contents, err := fileContents(testPath + ".go"); err == nil {
-		l.infoln("Begin test source")
-		l.println(contents)
-		l.infoln("End test source")
-	} else {
-		l.infoln(fmt.Sprintf("Could not read test source for %s", testName))
-		l.errorln(err.Error())
-	}
-
-	l.infoln("Begin test output")
 	l.println(string(output))
-	l.infoln("End test output")
 
 	if !testPassed {
 		return fmt.Errorf("test failed: %s", testName)
