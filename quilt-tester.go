@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -21,7 +22,6 @@ import (
 )
 
 var (
-	testRoot           = "/tests"
 	quiltPath          = "/.quilt"
 	testerImport       = "github.com/quilt/tester"
 	infrastructureSpec = filepath.Join(quiltPath, testerImport,
@@ -47,7 +47,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	tester, err := newTester(testRoot, myIP)
+	tester, err := newTester(myIP)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to create tester instance.")
 		os.Exit(1)
@@ -67,16 +67,22 @@ type tester struct {
 	ip          string
 }
 
-func newTester(testRoot, myIP string) (tester, error) {
+func newTester(myIP string) (tester, error) {
 	t := tester{
 		ip: myIP,
 	}
 
+	testRoot := flag.String("testRoot", "",
+		"the root directory containing the integration tests")
 	flag.BoolVar(&t.preserveFailed, "preserve-failed", false,
 		"don't destroy machines on failed tests")
 	flag.Parse()
 
-	err := t.generateTestSuites(testRoot)
+	if *testRoot == "" {
+		return tester{}, errors.New("testRoot is required")
+	}
+
+	err := t.generateTestSuites(*testRoot)
 	if err != nil {
 		return tester{}, err
 	}
