@@ -1,20 +1,16 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/spf13/afero"
 )
+
+var logsRoot = filepath.Join(os.Getenv("WORKSPACE"), "logs")
 
 // appFs is an aero filesystem.  It is stored in a variable so that we can replace it
 // with in-memory filesystems for unit tests.
@@ -24,7 +20,6 @@ type logger struct {
 	rootDir      string
 	cmdLogger    fileLogger
 	testerLogger fileLogger
-	ip           string
 }
 
 // Creates a new fileLogger for the given test, in the appropriate
@@ -38,19 +33,12 @@ func (l logger) testLogger(passed bool, testName string) fileLogger {
 	return fileLogger(filepath.Join(folder, filename))
 }
 
-// Retrieve the URL for the logger output.
-func (l logger) url() string {
-	return fmt.Sprintf("http://%s/%s", l.ip, filepath.Base(l.rootDir))
-}
-
 // Create a new logger that will log in the proper directory.
 // Also initializes all necessary directories and files.
-func newLogger(myIP string) (logger, error) {
-	webDir := filepath.Join(webRoot, time.Now().Format("02-01-2006_15h04m05s"))
-	passedDir := filepath.Join(webDir, "passed")
-	failedDir := filepath.Join(webDir, "failed")
-	logDir := filepath.Join(webDir, "log")
-	buildinfoPath := filepath.Join(webDir, "buildinfo")
+func newLogger() (logger, error) {
+	passedDir := filepath.Join(logsRoot, "passed")
+	failedDir := filepath.Join(logsRoot, "failed")
+	logDir := filepath.Join(logsRoot, "log")
 
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return logger{}, err
@@ -61,19 +49,9 @@ func newLogger(myIP string) (logger, error) {
 	if err := os.MkdirAll(failedDir, 0755); err != nil {
 		return logger{}, err
 	}
-	if err := exec.Command("cp", "/buildinfo", buildinfoPath).Run(); err != nil {
-		logrus.WithError(err).Error("Failed to copy build info.")
-	}
-
-	latestSymlink := filepath.Join(webRoot, "latest")
-	os.Remove(latestSymlink)
-	if err := os.Symlink(webDir, latestSymlink); err != nil {
-		return logger{}, err
-	}
 
 	return logger{
-		ip:           myIP,
-		rootDir:      webDir,
+		rootDir:      logsRoot,
 		testerLogger: fileLogger(filepath.Join(logDir, "quilt-tester.log")),
 		cmdLogger:    fileLogger(filepath.Join(logDir, "container.log")),
 	}, nil
@@ -134,42 +112,6 @@ func fileContents(file string) (string, error) {
 		return "", err
 	}
 	return string(contents), nil
-}
-
-type message struct {
-	Title string `json:"title"`
-	Short bool   `json:"short"`
-	Value string `json:"value"`
-}
-
-type slackPost struct {
-	Channel   string    `json:"channel"`
-	Color     string    `json:"color"`
-	Fields    []message `json:"fields"`
-	Pretext   string    `json:"pretext"`
-	Username  string    `json:"username"`
-	Iconemoji string    `json:"icon_emoji"`
-}
-
-// Post to slack.
-func slack(hookurl string, p slackPost) error {
-	body, err := json.Marshal(p)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.Post(hookurl, "application/json", bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		t, _ := ioutil.ReadAll(resp.Body)
-		return errors.New(string(t))
-	}
-
-	return nil
 }
 
 // Update the given spec to have the given namespace.

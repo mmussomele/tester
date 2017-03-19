@@ -22,32 +22,29 @@ import (
 )
 
 var (
-	quiltPath          = "/.quilt"
+	quiltPath          = filepath.Join(os.Getenv("WORKSPACE"), ".quilt")
 	testerImport       = "github.com/quilt/tester"
 	infrastructureSpec = filepath.Join(quiltPath, testerImport,
 		"config/infrastructure-runner.js")
-	slackEndpoint = "https://hooks.slack.com/services/T4LADFWP5/B4M344RU6/" +
-		"D4SUkbqsAR1JNJyvjB460mK8"
-	webRoot = "/var/www/quilt-tester"
 )
 
 // The global logger for this CI run.
 var log logger
 
 func main() {
-	myIP := os.Getenv("MY_IP")
-	if myIP == "" {
-		logrus.Error("IP of tester machine unknown.")
+	namespace := os.Getenv("TESTING_NAMESPACE")
+	if namespace == "" {
+		logrus.Error("Please set TESTING_NAMESPACE.")
 		os.Exit(1)
 	}
 
 	var err error
-	if log, err = newLogger(myIP); err != nil {
+	if log, err = newLogger(); err != nil {
 		logrus.WithError(err).Error("Failed to create logger.")
 		os.Exit(1)
 	}
 
-	tester, err := newTester(myIP)
+	tester, err := newTester(namespace)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to create tester instance.")
 		os.Exit(1)
@@ -64,12 +61,12 @@ type tester struct {
 
 	testSuites  []*testSuite
 	initialized bool
-	ip          string
+	namespace   string
 }
 
-func newTester(myIP string) (tester, error) {
+func newTester(namespace string) (tester, error) {
 	t := tester{
-		ip: myIP,
+		namespace: namespace,
 	}
 
 	testRoot := flag.String("testRoot", "",
@@ -91,7 +88,6 @@ func newTester(myIP string) (tester, error) {
 }
 
 func (t *tester) generateTestSuites(testRoot string) error {
-	namespace := t.namespace()
 	l := log.testerLogger
 
 	// First, we need to ls the testRoot, and find all of the folders. Then we can
@@ -120,7 +116,7 @@ func (t *tester) generateTestSuites(testRoot string) error {
 			switch {
 			case strings.HasSuffix(file.Name(), ".js"):
 				spec = path
-				if err := updateNamespace(spec, namespace); err != nil {
+				if err := updateNamespace(spec, t.namespace); err != nil {
 					l.infoln(fmt.Sprintf(
 						"Error updating namespace for %s.", spec))
 					l.errorln(err.Error())
@@ -156,7 +152,7 @@ func (t tester) run() error {
 			return
 		}
 
-		cleanupMachines(t.namespace())
+		cleanupMachines(t.namespace)
 	}()
 
 	if err := t.setup(); err != nil {
@@ -165,17 +161,13 @@ func (t tester) run() error {
 		for _, suite := range t.testSuites {
 			suite.failed = 1
 		}
-		t.slack(false)
 		return err
 	}
 
-	err := t.runTestSuites()
-	t.slack(true)
-	return err
+	return t.runTestSuites()
 }
 
 func (t *tester) setup() error {
-	namespace := t.namespace()
 	l := log.testerLogger
 
 	l.infoln("Starting the Quilt daemon.")
@@ -192,8 +184,8 @@ func (t *tester) setup() error {
 	}
 
 	// Do a preliminary quilt stop.
-	l.infoln(fmt.Sprintf("Preliminary `quilt stop %s`", namespace))
-	_, _, err = stop(namespace)
+	l.infoln(fmt.Sprintf("Preliminary `quilt stop %s`", t.namespace))
+	_, _, err = stop(t.namespace)
 	if err != nil {
 		l.infoln(fmt.Sprintf("Error stopping: %s", err.Error()))
 		return err
@@ -203,7 +195,7 @@ func (t *tester) setup() error {
 	l.infoln("Booting the machines the test suites will run on, and waiting " +
 		"for them to connect back.")
 	l.infoln("Begin " + infrastructureSpec)
-	if err := updateNamespace(infrastructureSpec, namespace); err != nil {
+	if err := updateNamespace(infrastructureSpec, t.namespace); err != nil {
 		l.infoln(fmt.Sprintf("Error updating namespace for %s.",
 			infrastructureSpec))
 		l.errorln(err.Error())
@@ -236,80 +228,6 @@ func (t tester) runTestSuites() error {
 		}
 	}
 	return err
-}
-
-func (t tester) namespace() string {
-	sanitizedIP := strings.Replace(t.ip, ".", "-", -1)
-	return fmt.Sprintf("tester-%s", sanitizedIP)
-}
-
-func toPost(failed bool, pretext string, text string) slackPost {
-	iconemoji := ":confetti_ball:"
-	color := "#009900" // Green
-	if failed {
-		iconemoji = ":oncoming_police_car:"
-		color = "#D00000" // Red
-	}
-
-	return slackPost{
-		Channel:   os.Getenv("SLACK_CHANNEL"),
-		Color:     color,
-		Pretext:   pretext,
-		Username:  "quilt-bot",
-		Iconemoji: iconemoji,
-		Fields: []message{
-			{
-				Title: "Continuous Integration",
-				Short: false,
-				Value: text,
-			},
-		},
-	}
-}
-
-func (t tester) slack(initialized bool) {
-	log.testerLogger.infoln("Posting to slack.")
-
-	var suitesPassed []string
-	var suitesFailed []string
-	for _, suite := range t.testSuites {
-		if suite.failed != 0 {
-			suitesFailed = append(suitesFailed, suite.name)
-		} else {
-			suitesPassed = append(suitesPassed, suite.name)
-		}
-	}
-
-	var failed bool
-	var pretext, text string
-	if !initialized {
-		failed = true
-		text = "Didn't run tests"
-		pretext = fmt.Sprintf("<!channel> Initialization <%s|failed>.",
-			log.url())
-	} else {
-		// The tests passed.
-		failed = false
-		pretext = fmt.Sprintf("All tests <%s|passed>!", log.url())
-		text = fmt.Sprintf("Test Suites Passed: %s",
-			strings.Join(suitesPassed, ", "))
-
-		// Some tests failed.
-		if len(suitesFailed) > 0 {
-			failed = true
-			text += fmt.Sprintf("\nTest Suites Failed: %s",
-				strings.Join(suitesFailed, ", "))
-			pretext = fmt.Sprintf("<!channel> Some tests <%s|failed>",
-				log.url())
-		}
-	}
-
-	err := slack(slackEndpoint, toPost(failed, pretext, text))
-	if err != nil {
-		l := log.testerLogger
-		l.infoln("Error posting to Slack.")
-		l.errorln(err.Error())
-	}
 }
 
 type testSuite struct {

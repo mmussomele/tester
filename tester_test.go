@@ -36,20 +36,6 @@ func TestCmdExec(t *testing.T) {
 	}
 }
 
-func TestURLGeneration(t *testing.T) {
-	t.Parallel()
-
-	l := logger{
-		rootDir: "/var/www/quilt-tester/test",
-		ip:      "8.8.8.8",
-	}
-	res := l.url()
-	exp := "http://8.8.8.8/test"
-	if res != exp {
-		t.Errorf("Bad URL generation, expected %s, got %s.", exp, res)
-	}
-}
-
 func TestUpdateNamespace(t *testing.T) {
 	appFs = afero.NewMemMapFs()
 
