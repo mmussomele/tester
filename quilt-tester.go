@@ -112,8 +112,7 @@ func (t *tester) generateTestSuites(testRoot string) error {
 			return err
 		}
 
-		var spec string
-		var tests []string
+		var spec, test string
 		for _, file := range files {
 			path := filepath.Join(testSuiteFolder, file.Name())
 			switch {
@@ -127,13 +126,13 @@ func (t *tester) generateTestSuites(testRoot string) error {
 				}
 			// If the file is executable by everyone, and is not a directory.
 			case (file.Mode()&1 != 0) && !file.IsDir():
-				tests = append(tests, path)
+				test = path
 			}
 		}
 		newSuite := testSuite{
-			name:  filepath.Base(testSuiteFolder),
-			spec:  spec,
-			tests: tests,
+			name: filepath.Base(testSuiteFolder),
+			spec: spec,
+			test: test,
 		}
 		t.testSuites = append(t.testSuites, &newSuite)
 	}
@@ -149,7 +148,7 @@ func (t tester) run() error {
 
 		failed := false
 		for _, suite := range t.testSuites {
-			if suite.failed != 0 {
+			if !suite.passed {
 				failed = true
 				break
 			}
@@ -166,7 +165,7 @@ func (t tester) run() error {
 		log.testerLogger.errorln("Unable to setup the tests, bailing.")
 		// All suites failed if we didn't run them.
 		for _, suite := range t.testSuites {
-			suite.failed = 1
+			suite.passed = false
 		}
 		return err
 	}
@@ -240,9 +239,8 @@ func (t tester) runTestSuites() error {
 type testSuite struct {
 	name   string
 	spec   string
-	tests  []string
-	passed int
-	failed int
+	test   string
+	passed bool
 }
 
 func (ts *testSuite) run() error {
@@ -260,31 +258,24 @@ func (ts *testSuite) run() error {
 	l.infoln("Waiting for containers to start up")
 	if err := waitForContainers(ts.spec); err != nil {
 		l.println(".. Containers never started: " + err.Error())
-		ts.failed = 1
+		ts.passed = false
 		return err
 	}
 
 	// Wait a little bit longer for any container bootstrapping after boot.
 	time.Sleep(30 * time.Second)
 
-	l.infoln("Starting Tests")
-	var err error
-	for _, test := range ts.tests {
-		l.println(".. " + filepath.Base(test))
-		if e := runTest(test); e == nil {
-			l.println(".... Passed")
-			ts.passed++
-		} else {
-			l.println(".... Failed")
-			ts.failed++
+	l.infoln("Starting Test")
+	l.println(".. " + filepath.Base(ts.test))
 
-			if err == nil {
-				err = e
-			}
-		}
+	err := runTest(ts.test)
+	if err == nil {
+		l.println(".... Passed")
+		ts.passed = true
+	} else {
+		l.println(".... Failed")
+		ts.passed = false
 	}
-
-	l.infoln("Finished Tests")
 
 	return err
 }

@@ -24,7 +24,7 @@ func writeJUnitReport(tests []*testSuite, filename string) {
 	report := JUnitReport{NumTests: len(tests)}
 	for _, t := range tests {
 		junitResult := TestCase{Name: t.name, ClassName: "tests"}
-		if t.failed != 0 {
+		if !t.passed {
 			junitResult.Failure = &struct{}{}
 		}
 		report.TestResults = append(report.TestResults, junitResult)
