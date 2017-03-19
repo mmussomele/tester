@@ -2,15 +2,13 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/spf13/afero"
 )
-
-var logsRoot = filepath.Join(os.Getenv("WORKSPACE"), "logs")
 
 // appFs is an aero filesystem.  It is stored in a variable so that we can replace it
 // with in-memory filesystems for unit tests.
@@ -24,55 +22,33 @@ type logger struct {
 // Create a new logger that will log in the proper directory.
 // Also initializes all necessary directories and files.
 func newLogger() (logger, error) {
-	logDir := filepath.Join(logsRoot, "log")
-
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	cmdLoggerPath := filepath.Join(os.Getenv("WORKSPACE"), "commandOutputs.log")
+	cmdLoggerFile, err := os.Create(cmdLoggerPath)
+	if err != nil {
 		return logger{}, err
 	}
 
 	return logger{
-		testerLogger: fileLogger(filepath.Join(logDir, "quilt-tester.log")),
-		cmdLogger:    fileLogger(filepath.Join(logDir, "container.log")),
+		testerLogger: fileLogger{os.Stdout},
+		cmdLogger:    fileLogger{cmdLoggerFile},
 	}, nil
 }
 
-type fileLogger string
+type fileLogger struct {
+	out io.Writer
+}
 
 func (l fileLogger) infoln(msg string) {
 	timestamp := time.Now().Format("[15:04:05] ")
-	toWrite := "\n" + timestamp + "=== " + msg + " ===\n"
-	if err := writeTo(string(l), toWrite); err != nil {
-		logrus.WithError(err).Errorf("Failed to write %s to %s.", msg, string(l))
-	}
+	l.println("\n" + timestamp + "=== " + msg + " ===")
 }
 
 func (l fileLogger) errorln(msg string) {
-	toWrite := "\n=== Error Text ===\n" + msg + "\n"
-	if err := writeTo(string(l), toWrite); err != nil {
-		logrus.WithError(err).Errorf("Failed to write %s to %s.", msg, string(l))
-	}
+	l.println("\n=== Error Text ===\n" + msg + "\n")
 }
 
 func (l fileLogger) println(msg string) {
-	if err := writeTo(string(l), msg+"\n"); err != nil {
-		logrus.WithError(err).Errorf("Failed to write %s to %s.", msg, string(l))
-	}
-}
-
-func writeTo(file string, message string) error {
-	a := afero.Afero{
-		Fs: appFs,
-	}
-
-	f, err := a.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		logrus.WithError(err).Errorf("Couldn't open %s for writing", file)
-		return err
-	}
-
-	defer f.Close()
-	_, err = f.WriteString(message)
-	return err
+	fmt.Fprintln(l.out, msg)
 }
 
 func overwrite(file string, message string) error {

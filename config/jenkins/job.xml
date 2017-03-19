@@ -29,7 +29,7 @@ tester --preserve-failed -testRoot=./tests -junitOut=${WORKSPACE}/report.xml</co
   </builders>
   <publishers>
     <hudson.tasks.ArtifactArchiver>
-      <artifacts>logs/**/*</artifacts>
+      <artifacts>*.log</artifacts>
       <allowEmptyArchive>false</allowEmptyArchive>
       <onlyIfSuccessful>false</onlyIfSuccessful>
       <fingerprint>false</fingerprint>

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os/exec"
 	"sort"
 	"testing"
@@ -11,11 +12,8 @@ import (
 )
 
 func TestCmdExec(t *testing.T) {
-	appFs = afero.NewMemMapFs()
-
-	outputPath := "output.log"
 	log = logger{
-		cmdLogger: fileLogger(outputPath),
+		cmdLogger: fileLogger{ioutil.Discard},
 	}
 
 	expStdout := "standard out"
