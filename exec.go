@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -85,6 +86,7 @@ func runSpec(spec string) (string, string, error) {
 
 // runQuiltDaemon starts the daemon.
 func runQuiltDaemon() {
+	os.Remove(api.DefaultSocket[len("unix://"):])
 	cmd := exec.Command("quilt", "-l", "debug", "daemon")
 	execCmd(cmd, "QUILT")
 }
