@@ -267,18 +267,20 @@ func (ts *testSuite) run() error {
 	// Wait a little bit longer for any container bootstrapping after boot.
 	time.Sleep(30 * time.Second)
 
-	l.infoln("Starting Test")
-	l.println(".. " + filepath.Base(ts.test))
+	var err error
+	if ts.test != "" {
+		l.infoln("Starting Test")
+		l.println(".. " + filepath.Base(ts.test))
 
-	output, err := runTest(ts.test)
-	if err == nil {
-		l.println(".... Passed")
-		ts.passed = true
-	} else {
-		l.println(".... Failed")
-		ts.passed = false
+		ts.output, err = runTest(ts.test)
+		if err == nil {
+			l.println(".... Passed")
+			ts.passed = true
+		} else {
+			l.println(".... Failed")
+			ts.passed = false
+		}
 	}
-	ts.output = output
 
 	return err
 }
