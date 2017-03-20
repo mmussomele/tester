@@ -4,7 +4,26 @@
   <description></description>
   <keepDependencies>false</keepDependencies>
   <properties/>
-  <scm class="hudson.scm.NullSCM"/>
+  <scm class="hudson.plugins.git.GitSCM" plugin="git@3.1.0">
+    <configVersion>2</configVersion>
+    <userRemoteConfigs>
+      <hudson.plugins.git.UserRemoteConfig>
+        <url>https://github.com/quilt/quilt</url>
+      </hudson.plugins.git.UserRemoteConfig>
+    </userRemoteConfigs>
+    <branches>
+      <hudson.plugins.git.BranchSpec>
+        <name>*/master</name>
+      </hudson.plugins.git.BranchSpec>
+    </branches>
+    <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+    <submoduleCfg class="list"/>
+    <extensions>
+      <hudson.plugins.git.extensions.impl.RelativeTargetDirectory>
+        <relativeTargetDir>gohome/src/github.com/quilt/quilt</relativeTargetDir>
+      </hudson.plugins.git.extensions.impl.RelativeTargetDirectory>
+    </extensions>
+  </scm>
   <canRoam>true</canRoam>
   <disabled>false</disabled>
   <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
@@ -20,7 +39,8 @@
       <command>export GOPATH=${WORKSPACE}/gohome
 export PATH=${GOPATH}/bin:${PATH}
 
-go get -v -u github.com/quilt/quilt github.com/quilt/tester
+go install -v github.com/quilt/quilt
+go get -v github.com/quilt/tester
 
 cd $GOPATH/src/github.com/quilt/tester
 make tests
@@ -60,7 +80,7 @@ tester --preserve-failed -testRoot=./tests -junitOut=${WORKSPACE}/report.xml</co
       <notifyRepeatedFailure>true</notifyRepeatedFailure>
       <includeTestSummary>true</includeTestSummary>
       <includeFailedTests>true</includeFailedTests>
-      <commitInfoChoice>NONE</commitInfoChoice>
+      <commitInfoChoice>AUTHORS_AND_TITLES</commitInfoChoice>
       <includeCustomMessage>false</includeCustomMessage>
       <customMessage></customMessage>
     </jenkins.plugins.slack.SlackNotifier>
