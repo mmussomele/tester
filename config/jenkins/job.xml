@@ -62,6 +62,7 @@ tester --preserve-failed -testRoot=./tests -junitOut=${WORKSPACE}/report.xml</co
       <healthScaleFactor>1.0</healthScaleFactor>
       <allowEmptyResults>false</allowEmptyResults>
     </hudson.tasks.junit.JUnitResultArchiver>
+    <hudson.plugins.claim.ClaimPublisher plugin="claim@2.9"/>
     <jenkins.plugins.slack.SlackNotifier plugin="slack@2.2">
       <baseUrl></baseUrl>
       <teamDomain>{{slackTeam}}</teamDomain>
