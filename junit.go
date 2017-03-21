@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/xml"
+	"fmt"
 	"os"
 
 	"github.com/Sirupsen/logrus"
@@ -14,11 +15,12 @@ type JUnitReport struct {
 }
 
 type TestCase struct {
-	XMLName   xml.Name  `xml:"testcase"`
-	Name      string    `xml:"name,attr"`
-	ClassName string    `xml:"classname,attr"`
-	Failure   *struct{} `xml:"failure,omitempty"`
-	Output    string    `xml:"system-out"`
+	XMLName     xml.Name  `xml:"testcase"`
+	Name        string    `xml:"name,attr"`
+	ClassName   string    `xml:"classname,attr"`
+	TimeElapsed string    `xml:"time,attr"`
+	Failure     *struct{} `xml:"failure,omitempty"`
+	Output      string    `xml:"system-out"`
 }
 
 func writeJUnitReport(tests []*testSuite, filename string) {
@@ -29,7 +31,12 @@ func writeJUnitReport(tests []*testSuite, filename string) {
 			continue
 		}
 
-		junitResult := TestCase{Name: t.name, ClassName: "tests", Output: t.output}
+		junitResult := TestCase{
+			Name:        t.name,
+			ClassName:   "tests",
+			Output:      t.output,
+			TimeElapsed: fmt.Sprintf("%f", t.timeElapsed.Seconds()),
+		}
 		if !t.passed {
 			junitResult.Failure = &struct{}{}
 		}

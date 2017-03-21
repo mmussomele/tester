@@ -241,11 +241,17 @@ type testSuite struct {
 	spec string
 	test string
 
-	output string
-	passed bool
+	output      string
+	passed      bool
+	timeElapsed time.Duration
 }
 
 func (ts *testSuite) run() error {
+	testStart := time.Now()
+	defer func() {
+		ts.timeElapsed = time.Since(testStart)
+	}()
+
 	l := log.testerLogger
 
 	l.infoln(fmt.Sprintf("Test Suite: %s", ts.name))
