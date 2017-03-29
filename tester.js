@@ -7,7 +7,7 @@ var jenkinsStagingDir = "/tmp/files/"
 exports.New = function(opts) {
     assertRequiredParameters(opts, ["awsAccessKey", "awsSecretAccessKey", "testingNamespace", "slackTeam", "slackChannel", "slackToken"]);
 
-    var container = new Container("quay.io/quilt/tester",
+    var container = new Container("quilt/tester",
         ["/bin/bash", "-c",
             "cp -r " + jenkinsStagingDir + "* /var/jenkins_home;" +
             "/bin/tini -s -- /usr/local/bin/jenkins.sh"]);
