@@ -248,11 +248,21 @@ type testSuite struct {
 
 func (ts *testSuite) run() error {
 	testStart := time.Now()
+	l := log.testerLogger
+
 	defer func() {
 		ts.timeElapsed = time.Since(testStart)
 	}()
-
-	l := log.testerLogger
+	defer func() {
+		logsPath := filepath.Join(os.Getenv("WORKSPACE"), ts.name+"_debug_logs")
+		cmd := exec.Command("quilt", "debug-logs", "-tar=false",
+			"-o="+logsPath, "-all")
+		stdout, stderr, err := execCmd(cmd, "DEBUG LOGS")
+		if err != nil {
+			l.errorln(fmt.Sprintf("Debug logs encountered an error:"+
+				" %v\nstdout: %s\nstderr: %s", err, stdout, stderr))
+		}
+	}()
 
 	l.infoln(fmt.Sprintf("Test Suite: %s", ts.name))
 	l.infoln("Start " + ts.name + ".js")
