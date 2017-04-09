@@ -8,7 +8,7 @@ import (
 
 	"github.com/quilt/quilt/api"
 	"github.com/quilt/quilt/api/client/getter"
-	"github.com/quilt/quilt/minion/supervisor"
+	"github.com/quilt/quilt/minion/supervisor/images"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -54,13 +54,13 @@ func main() {
 }
 
 var quiltContainers = map[string]struct{}{
-	supervisor.Etcd:          {},
-	supervisor.Ovncontroller: {},
-	supervisor.Ovnnorthd:     {},
-	supervisor.Ovsdb:         {},
-	supervisor.Ovsvswitchd:   {},
-	supervisor.Registry:      {},
-	"minion":                 {},
+	images.Etcd:          {},
+	images.Ovncontroller: {},
+	images.Ovnnorthd:     {},
+	images.Ovsdb:         {},
+	images.Ovsvswitchd:   {},
+	images.Registry:      {},
+	"minion":             {},
 }
 
 func filterQuiltContainers(containers []string) (filtered []string) {
