@@ -45,7 +45,7 @@ func main() {
 }
 
 var testPort = 80
-var testHost = fmt.Sprintf("github.com:%d", testPort)
+var testHost = fmt.Sprintf("google.com:%d", testPort)
 
 func test(containers []db.Container, connections []db.Connection) bool {
 	connected := map[string]struct{}{}
